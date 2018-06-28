@@ -8,7 +8,9 @@ This is a toy Android application I used get some experience with:
 
 The app obtains accelerometer sensor data and plots the X,Y,Z acceleration components along with a shake detector signal which rises to a "shake state" when the device is subjected to an acceleration of more than 2 gs.
 
-The shake detect signal is computed using a high-pass filter approximation which subtracts the average of each accleration component from every new sample.  Basically the detector signal looks for changes in the running average.
+The shake detect signal is computed using a high-pass filter approximation which subtracts the average of each accleration component from every new sample. The Y-axis units are g's and do correspond to the acceleration components.    
+
+The detector signal clamps to 20g's when a shae is detected. (The magnitude of the shake signal is just a set level.)
 
 Here is a picture:
 
