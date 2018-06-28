@@ -17,8 +17,9 @@ Here is a picture:
 
 ## Technologies  
 
-Accelerometer sensor reading is covered by Android documentation.
-See [GraphView library](http://www.android-graphview.org/) for information on the graphing library.  
+Accelerometer sensor reading is covered by Android documentation.  
+  
+See [GraphView library](http://www.android-graphview.org/) for information on the graphing library.    
 
 The data file created by the app is written to the app's storage. I used [Handshaker](http://www.teamandroid.com/2017/03/19/handshaker-android-files-transfer-mac/) to upload the signal data to my Mac to play with filtering algorithms.
 
