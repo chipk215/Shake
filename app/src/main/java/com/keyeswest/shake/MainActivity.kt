@@ -12,6 +12,7 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Window
 import android.view.WindowManager
+import android.widget.Switch
 import com.jjoe64.graphview.GraphView
 import com.jjoe64.graphview.series.DataPoint
 import com.jjoe64.graphview.series.LineGraphSeries
@@ -28,6 +29,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var graph: GraphView? = null
     private var sampleCount: Double = 0.0
 
+    private var switch : Switch? = null
+
     private var xMean: Double = 0.0
     private var yMean: Double = 0.0
     private var zMean: Double = 0.0
@@ -41,23 +44,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var fos: FileOutputStream? = null
 
     
-    private var seriesX: LineGraphSeries<DataPoint> = LineGraphSeries()
-    private var seriesY: LineGraphSeries<DataPoint> = LineGraphSeries()
-    private var seriesZ: LineGraphSeries<DataPoint> = LineGraphSeries()
+    private var seriesX: LineGraphSeries<DataPoint>? = null
+    private var seriesY: LineGraphSeries<DataPoint>? = null
+    private var seriesZ: LineGraphSeries<DataPoint>? = null
 
-    private var seriesXPlot: LineGraphSeries<DataPoint> = LineGraphSeries()
-    private var seriesYPlot: LineGraphSeries<DataPoint> = LineGraphSeries()
-    private var seriesZPlot: LineGraphSeries<DataPoint> = LineGraphSeries()
 
-    private var seriesClamped: LineGraphSeries<DataPoint> = LineGraphSeries()
+    private var seriesClamped: LineGraphSeries<DataPoint>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        requestWindowFeature(Window.FEATURE_NO_TITLE)
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN)
         super.onCreate(savedInstanceState)
+
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
+        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN)
+
         setContentView(R.layout.activity_main)
-        
+
+        switch = findViewById(R.id.on_off_switch)
 
         graph = findViewById(R.id.graph)
         graph!!.viewport.isXAxisBoundsManual = true
@@ -69,25 +72,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         graph!!.viewport.setMaxY(40.0)
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-
-        seriesX.color = Color.RED
-        seriesY.color = Color.GREEN
-        seriesZ.color = Color.BLUE
-
-        seriesX.thickness = 4
-        seriesY.thickness = 4
-        seriesZ.thickness = 4
-
-        seriesXPlot.color = Color.RED
-        seriesYPlot.color = Color.GREEN
-        seriesZPlot.color = Color.BLUE
-
-        seriesXPlot.thickness = 8
-        seriesYPlot.thickness = 8
-        seriesZPlot.thickness = 8
-
-        seriesClamped.color = Color.BLACK
-        seriesClamped.thickness = 8
 
         filesWriteable = isExternalStorageAvailable() && !isExternalStorageReadOnly()
 
@@ -108,28 +92,38 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
 
+
     override
     fun onResume() {
         super.onResume()
-        // register this class as a listener for the orientation and
-        // accelerometer sensors
-        sensorManager!!.registerListener(this,
-                sensorManager!!.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
-                SensorManager.SENSOR_DELAY_NORMAL)
 
-        // plot the raw sensor values
-        graph!!.addSeries(seriesX)
-        graph!!.addSeries(seriesY)
-        graph!!.addSeries(seriesZ)
+        switch!!.setOnClickListener{
+            if (switch!!.isChecked){
+                initializeGraph()
 
-        // Binary shake indicator
-        graph!!.addSeries(seriesClamped)
+                // register this class as a listener for the orientation and
+                // accelerometer sensors
+                sensorManager!!.registerListener(this,
+                        sensorManager!!.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                        SensorManager.SENSOR_DELAY_NORMAL)
+
+            }else{
+                sensorManager!!.unregisterListener(this)
+                AppExecutors.getInstance().diskIO().execute(Runnable {
+                    val dataString = """Stopping Collection${System.getProperty("line.separator")}"""
+
+                    fos!!.write(dataString.toByteArray())
+                })
+
+            }
+        }
 
     }
 
     override fun onPause() {
         // unregister listener
         super.onPause()
+
         sensorManager!!.unregisterListener(this)
     }
 
@@ -165,11 +159,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         sampleCount += 1.0
 
         // plot the raw sensor data
-        seriesX.appendData(DataPoint(sampleCount, x.toDouble()),
+        seriesX!!.appendData(DataPoint(sampleCount, x.toDouble()),
                 true, 40)
-        seriesY.appendData(DataPoint(sampleCount, y.toDouble()),
+        seriesY!!.appendData(DataPoint(sampleCount, y.toDouble()),
                 true, 40)
-        seriesZ.appendData(DataPoint(sampleCount, z.toDouble()),
+        seriesZ!!.appendData(DataPoint(sampleCount, z.toDouble()),
                 true, 40)
 
 
@@ -177,13 +171,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val yPair = highPassFilterApproximation(sampleCount, y, yMean)
         val zPair = highPassFilterApproximation(sampleCount, z, zMean)
 
-
         val xFiltered = xPair.first
         xMean = xPair.second
 
         val yFiltered = yPair.first
         yMean = yPair.second
-
 
         val zFiltered = zPair.first
         zMean = zPair.second
@@ -197,11 +189,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
 
-        seriesClamped.appendData(DataPoint(sampleCount, clamped),
+        seriesClamped!!.appendData(DataPoint(sampleCount, clamped),
                 true, 40)
 
         val actualTime = event.timestamp
-
 
         // save sample data to csv file
         AppExecutors.getInstance().diskIO().execute(Runnable {
@@ -210,7 +201,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
             fos!!.write(dataString.toByteArray())
         })
-
 
     }
 
@@ -231,6 +221,34 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun isExternalStorageReadOnly(): Boolean {
         val extStorageState = Environment.getExternalStorageState()
         return Environment.MEDIA_MOUNTED_READ_ONLY == extStorageState
+
+    }
+
+    private fun initializeGraph(){
+        graph!!.removeAllSeries()
+        seriesX = LineGraphSeries()
+        seriesY = LineGraphSeries()
+        seriesZ = LineGraphSeries()
+
+        seriesX!!.color = Color.RED
+        seriesY!!.color = Color.GREEN
+        seriesZ!!.color = Color.BLUE
+
+        seriesX!!.thickness = 4
+        seriesY!!.thickness = 4
+        seriesZ!!.thickness = 4
+
+        seriesClamped = LineGraphSeries()
+        seriesClamped!!.color = Color.BLACK
+        seriesClamped!!.thickness = 8
+
+        // add the raw sensor values to the graph
+        graph!!.addSeries(seriesX)
+        graph!!.addSeries(seriesY)
+        graph!!.addSeries(seriesZ)
+
+        // Binary shake indicator
+        graph!!.addSeries(seriesClamped)
 
     }
 }
