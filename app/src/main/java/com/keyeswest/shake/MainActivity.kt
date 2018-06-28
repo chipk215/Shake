@@ -14,6 +14,7 @@ import android.view.Window
 import android.view.WindowManager
 import android.widget.Switch
 import com.jjoe64.graphview.GraphView
+import com.jjoe64.graphview.LegendRenderer
 import com.jjoe64.graphview.series.DataPoint
 import com.jjoe64.graphview.series.LineGraphSeries
 import java.io.File
@@ -249,6 +250,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         // Binary shake indicator
         graph!!.addSeries(seriesClamped)
+
+        seriesX!!.title = getString(R.string.x_sample)
+        seriesY!!.title = getString(R.string.y_sample)
+        seriesZ!!.title = getString(R.string.z_sample)
+        seriesClamped!!.title = getString(R.string.shake_detect)
+        graph!!.legendRenderer.isVisible = true
+        graph!!.legendRenderer.align = LegendRenderer.LegendAlign.TOP
+
 
     }
 }

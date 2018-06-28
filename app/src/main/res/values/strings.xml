@@ -4,4 +4,8 @@
     <string name="collect_data">Collect Data</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
+    <string name="x_sample">X Samples</string>
+    <string name="y_sample">Y Samples</string>
+    <string name="z_sample">Z Samples</string>
+    <string name="shake_detect">Shake Detector</string>
 </resources>
