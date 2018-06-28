@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
-import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import com.jjoe64.graphview.GraphView
@@ -26,9 +25,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private var sensorManager: SensorManager? = null
 
-    private var lastUpdate: Long = 0
     private var graph: GraphView? = null
-    private var graph2LastXValue: Double = 0.0
+    private var sampleCount: Double = 0.0
 
     private var xMean: Double = 0.0
     private var yMean: Double = 0.0
@@ -42,16 +40,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var logger: File? = null
     private var fos: FileOutputStream? = null
 
-
-    /*
-      private val series : LineGraphSeries<DataPoint> =
-              LineGraphSeries(arrayOf(DataPoint(0.0, 1.0),
-                                      DataPoint(1.0, 5.0),
-                                      DataPoint(2.0, 3.0),
-                                      DataPoint(3.0, 2.0),
-                                      DataPoint(4.0, 6.0)))
-  */
-
+    
     private var seriesX: LineGraphSeries<DataPoint> = LineGraphSeries()
     private var seriesY: LineGraphSeries<DataPoint> = LineGraphSeries()
     private var seriesZ: LineGraphSeries<DataPoint> = LineGraphSeries()
@@ -60,7 +49,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var seriesYPlot: LineGraphSeries<DataPoint> = LineGraphSeries()
     private var seriesZPlot: LineGraphSeries<DataPoint> = LineGraphSeries()
 
-    private var seriesNormalized: LineGraphSeries<DataPoint> = LineGraphSeries()
+    private var seriesClamped: LineGraphSeries<DataPoint> = LineGraphSeries()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -68,8 +57,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-
+        
 
         graph = findViewById(R.id.graph)
         graph!!.viewport.isXAxisBoundsManual = true
@@ -80,9 +68,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         graph!!.viewport.setMinY(-40.0)
         graph!!.viewport.setMaxY(40.0)
 
-
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        lastUpdate = System.currentTimeMillis()
 
         seriesX.color = Color.RED
         seriesY.color = Color.GREEN
@@ -100,8 +86,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         seriesYPlot.thickness = 8
         seriesZPlot.thickness = 8
 
-        seriesNormalized.color = Color.BLACK
-        seriesNormalized.thickness = 8
+        seriesClamped.color = Color.BLACK
+        seriesClamped.thickness = 8
 
         filesWriteable = isExternalStorageAvailable() && !isExternalStorageReadOnly()
 
@@ -131,15 +117,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 sensorManager!!.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
                 SensorManager.SENSOR_DELAY_NORMAL)
 
+        // plot the raw sensor values
         graph!!.addSeries(seriesX)
         graph!!.addSeries(seriesY)
         graph!!.addSeries(seriesZ)
 
-        //    graph!!.addSeries(seriesXPlot)
-        //    graph!!.addSeries(seriesYPlot)
-        //    graph!!.addSeries(seriesZPlot)
-
-        graph!!.addSeries(seriesNormalized)
+        // Binary shake indicator
+        graph!!.addSeries(seriesClamped)
 
     }
 
@@ -155,9 +139,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-
-    }
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
@@ -167,6 +149,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
 
     private fun getAccelerometer(event: SensorEvent) {
+        
+        // obtain the raw accelerometer values
         val values = event.values
         val x = values[0]
         val y = values[1]
@@ -178,80 +162,65 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         Log.d(TAG, "z = $z ")
 
 
-        graph2LastXValue += 1.0
+        sampleCount += 1.0
 
-
-        seriesX.appendData(DataPoint(graph2LastXValue, x.toDouble()),
+        // plot the raw sensor data
+        seriesX.appendData(DataPoint(sampleCount, x.toDouble()),
                 true, 40)
-        seriesY.appendData(DataPoint(graph2LastXValue, y.toDouble()),
+        seriesY.appendData(DataPoint(sampleCount, y.toDouble()),
                 true, 40)
-        seriesZ.appendData(DataPoint(graph2LastXValue, z.toDouble()),
-                true, 40)
-
-
-        val xG = x.toDouble() / SensorManager.GRAVITY_EARTH
-        val yG = y.toDouble() / SensorManager.GRAVITY_EARTH
-        val zG = z.toDouble() / SensorManager.GRAVITY_EARTH
-
-        xMean = (xMean * (graph2LastXValue - 1) + xG) / graph2LastXValue
-        yMean = (yMean * (graph2LastXValue - 1) + yG) / graph2LastXValue
-        zMean = (zMean * (graph2LastXValue - 1) + zG) / graph2LastXValue
-
-        val xPlot = xG - xMean
-        val yPlot = yG - yMean
-        val zPlot = zG - zMean
-
-        /*
-        seriesXPlot.appendData(DataPoint(graph2LastXValue,  xPlot),
+        seriesZ.appendData(DataPoint(sampleCount, z.toDouble()),
                 true, 40)
 
-        seriesYPlot.appendData(DataPoint(graph2LastXValue, yPlot),
-                true, 40)
 
-        seriesZPlot.appendData(DataPoint(graph2LastXValue, zPlot),
-                true, 40)
+        val xPair = highPassFilterApproximation(sampleCount, x, xMean)
+        val yPair = highPassFilterApproximation(sampleCount, y, yMean)
+        val zPair = highPassFilterApproximation(sampleCount, z, zMean)
 
-*/
 
-        val normalizedAcceleration = Math.sqrt(xPlot * xPlot + yPlot * yPlot + zPlot * zPlot)
+        val xFiltered = xPair.first
+        xMean = xPair.second
+
+        val yFiltered = yPair.first
+        yMean = yPair.second
+
+
+        val zFiltered = zPair.first
+        zMean = zPair.second
+
+        val filteredAccelerationMagnitude =
+                Math.sqrt(xFiltered * xFiltered + yFiltered * yFiltered + zFiltered * zFiltered)
 
         var clamped: Double = 0.0
-        if (normalizedAcceleration > 2.0) {
+        if (filteredAccelerationMagnitude > 2.0) {
             clamped = 20.0
         }
 
 
-        Log.d(TAG, "Plot Value = $normalizedAcceleration")
-        seriesNormalized.appendData(DataPoint(graph2LastXValue, clamped),
+        seriesClamped.appendData(DataPoint(sampleCount, clamped),
                 true, 40)
 
         val actualTime = event.timestamp
 
 
+        // save sample data to csv file
         AppExecutors.getInstance().diskIO().execute(Runnable {
-            val dataString = "$actualTime, $x, $y, $z, $normalizedAcceleration" +
+            val dataString = "$actualTime, $x, $y, $z, $filteredAccelerationMagnitude" +
                     System.getProperty("line.separator")
 
             fos!!.write(dataString.toByteArray())
         })
 
-        if (normalizedAcceleration >= 2) {
-            if (actualTime - lastUpdate < 200) {
-                return
-            }
-            lastUpdate = actualTime
-            // Toast.makeText(this, "Device was shuffled", Toast.LENGTH_SHORT)
-            //         .show()
-/*
-            if (color) {
-                view!!.setBackgroundColor(Color.GREEN)
-            } else {
-                view!!.setBackgroundColor(Color.RED)
-            }
-            color = !color
-*/
-        }
 
+    }
+
+
+    private fun highPassFilterApproximation(count: Double, sample : Float, mean : Double) : Pair<Double, Double>{
+        var gValue = sample.toDouble() / SensorManager.GRAVITY_EARTH
+        var meanUpdate =  (mean * (count - 1) + gValue) / count
+        gValue -=  meanUpdate
+
+        return Pair(gValue, meanUpdate)
     }
 
     private fun isExternalStorageAvailable(): Boolean {
