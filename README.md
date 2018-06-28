@@ -1,7 +1,7 @@
 # Shake  
 
-This is a toy Kotlin application which provided an opportunity to get some experience with:  
-* Kotlin  
+This is a toy Android application I used get some experience with:  
+* Kotlin with Android  
 * Android's accelerometer  
 * [GraphView library](http://www.android-graphview.org/)  
 * Writing data to a file that can be uploaded from the Android device for analysis
@@ -15,10 +15,10 @@ Here is a picture:
 
 ## Technologies  
 
-Accelerometer sensor reading is covered by Androdi documentation.
-See [GraphView library](http://www.android-graphview.org/) for information on the graphong library.  
+Accelerometer sensor reading is covered by Android documentation.
+See [GraphView library](http://www.android-graphview.org/) for information on the graphing library.  
 
-The datga file is written to the app's storage. I used [Handshaker](http://www.teamandroid.com/2017/03/19/handshaker-android-files-transfer-mac/) to upload the signal data to my Mac to play with filtering algorithms.
+The data file created by the app is written to the app's storage. I used [Handshaker](http://www.teamandroid.com/2017/03/19/handshaker-android-files-transfer-mac/) to upload the signal data to my Mac to play with filtering algorithms.
 
 
 
