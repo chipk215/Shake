@@ -30,6 +30,7 @@
         android:text="@string/collect_data"
         android:textOff="@string/start"
         android:textOn="@string/stop"
+        android:padding="16dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

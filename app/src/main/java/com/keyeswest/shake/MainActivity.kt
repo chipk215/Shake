@@ -92,16 +92,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
-    }
-
-
-
-    override
-    fun onResume() {
-        super.onResume()
+        switch!!.isChecked = false;
 
         switch!!.setOnClickListener{
             if (switch!!.isChecked){
+                Log.d(TAG, "Start collection")
                 initializeGraph()
 
                 // register this class as a listener for the orientation and
@@ -111,6 +106,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         SensorManager.SENSOR_DELAY_NORMAL)
 
             }else{
+                Log.d(TAG, "Stop collection")
                 sensorManager!!.unregisterListener(this)
                 AppExecutors.getInstance().diskIO().execute(Runnable {
                     val dataString = """Stopping Collection${System.getProperty("line.separator")}"""
@@ -122,6 +118,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
     }
+
+
+
 
     override fun onPause() {
         // unregister listener
