@@ -25,6 +25,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private val TAG = "MAIN_ACTIVITY"
 
+    private val maxDataPoints = 80
+
     private var sensorManager: SensorManager? = null
 
     private var graph: GraphView? = null
@@ -66,7 +68,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         graph = findViewById(R.id.graph)
         graph!!.viewport.isXAxisBoundsManual = true
         graph!!.viewport.setMinX(0.0)
-        graph!!.viewport.setMaxX(40.0)
+        graph!!.viewport.setMaxX(maxDataPoints.toDouble())
 
         graph!!.viewport.isYAxisBoundsManual = true
         graph!!.viewport.setMinY(-40.0)
@@ -161,11 +163,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         // plot the raw sensor data
         seriesX!!.appendData(DataPoint(sampleCount, x.toDouble()),
-                true, 40)
+                true, maxDataPoints)
         seriesY!!.appendData(DataPoint(sampleCount, y.toDouble()),
-                true, 40)
+                true, maxDataPoints)
         seriesZ!!.appendData(DataPoint(sampleCount, z.toDouble()),
-                true, 40)
+                true, maxDataPoints)
 
 
         val xPair = highPassFilterApproximation(sampleCount, x, xMean)
@@ -191,7 +193,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
 
         seriesClamped!!.appendData(DataPoint(sampleCount, clamped),
-                true, 40)
+                true, maxDataPoints)
 
         val actualTime = event.timestamp
 
@@ -226,6 +228,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun initializeGraph(){
+
+        sampleCount = 0.0
         graph!!.removeAllSeries()
         seriesX = LineGraphSeries()
         seriesY = LineGraphSeries()
@@ -256,7 +260,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         seriesZ!!.title = getString(R.string.z_sample)
         seriesClamped!!.title = getString(R.string.shake_detect)
         graph!!.legendRenderer.isVisible = true
-        graph!!.legendRenderer.align = LegendRenderer.LegendAlign.TOP
+        graph!!.legendRenderer.align = LegendRenderer.LegendAlign.BOTTOM
+
+
+        // enables  horizontal scaling and scrolling
+        graph!!.viewport.isScalable = true
+
 
 
     }
