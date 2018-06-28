@@ -12,7 +12,8 @@ The shake detect signal is computed using a high-pass filter approximation which
 
 The detector signal clamps to 20g's when a shae is detected. (The magnitude of the shake signal is just a set level.)
 
-Here is a picture:
+Here is a picture:  
+![graph](docs/graph.png) 
 
 
 ## Technologies  
